@@ -1,5 +1,5 @@
 import { checkToken } from "@lib/checkToken";
-import { Database, Payload } from "@lib/types";
+import { Payload } from "@lib/types";
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@lib/getPrisma";
 
@@ -80,15 +80,13 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
+  // Coding in lecture
   const prisma = getPrisma();
 
-  // Check if course exists
-  const course = await prisma.course.findFirst({
-    //or findUnique
+  const foundcourseNo = await prisma.course.findFirst({
     where: { courseNo: courseNo },
   });
-
-  if (!course) {
+  if (!foundcourseNo) {
     return NextResponse.json(
       {
         ok: false,
@@ -97,27 +95,22 @@ export const POST = async (request: NextRequest) => {
       { status: 404 }
     );
   }
-
-  //check if course already enrolled
-  const enrolled = await prisma.enrollment.findFirst({
-    where: {
-      courseNo: courseNo,
-      studentId: studentId,
-    },
+  const foundcourse = await prisma.enrollment.findFirst({
+    where: { studentId: studentId, courseNo: courseNo },
   });
-
-  if (enrolled) {
+  if (foundcourse) {
     return NextResponse.json(
-      { ok: false, message: "You already registered this course" },
-      { status: 400 }
+      {
+        ok: false,
+        message: "You already registered this course",
+      },
+      { status: 409 }
     );
   }
-
-  //add course to database (enrollments collection)
   await prisma.enrollment.create({
     data: {
-      courseNo: courseNo,
       studentId: studentId,
+      courseNo: courseNo,
     },
   });
 
